@@ -118,9 +118,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun scheduleRepeatingNotification(
         id: Int,
+        channelId: String,
         title: String,
         text: String,
-        channelId: String,
+        priority : Int,
         autoCancel: Boolean,
         triggerAtMillis: Long,
         intervalMillis: Long
@@ -129,9 +130,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
         val intent = Intent(activity, NotificationReceiver::class.java).apply {
             putExtra("id", id)
+            putExtra("channelId", channelId)
             putExtra("title", title)
             putExtra("text", text)
-            putExtra("channelId", channelId)
+            putExtra("priority", priority)
             putExtra("autoCancel", autoCancel)
         }
 
@@ -159,9 +161,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun scheduleNotification(
         id: Int,
+        channelId: String,
         title: String,
         text: String,
-        channelId: String,
+        priority : Int,
         autoCancel: Boolean,
         triggerAtMillis: Long
     ) {
@@ -169,9 +172,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
         val intent = Intent(activity, NotificationReceiver::class.java).apply {
             putExtra("id", id)
+            putExtra("channelId", channelId)
             putExtra("title", title)
             putExtra("text", text)
-            putExtra("channelId", channelId)
+            putExtra("priority", priority)
             putExtra("autoCancel", autoCancel)
         }
 
@@ -183,7 +187,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         )
 
         val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.setExactAndAllowWhileIdle(
+        alarmManager.set(
             AlarmManager.RTC_WAKEUP,
             triggerAtMillis,
             pendingIntent
@@ -191,7 +195,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
         Log.d(
             "GodotNotif",
-            "Schedule Repeating Notification at triggerAtMillis '$triggerAtMillis'"
+            "Schedule one-time Notification at triggerAtMillis '$triggerAtMillis'"
         )
     }
 
@@ -235,6 +239,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         alarmManager.cancel(pendingIntent)
         pendingIntent.cancel()
 
-        Log.d("GodotNotif", "Notification, id $id', canceled.")
+        Log.d("GodotNotif", "Notification, with id $id, was canceled.")
     }
 }
