@@ -6,6 +6,7 @@ plugins {
 val pluginName = "LocalNotificationScheduler"
 val pluginPackageName = "org.godotengine.plugin.android.localnotificationscheduler"
 
+
 android {
     namespace = pluginPackageName
     compileSdk = 36
@@ -46,9 +47,7 @@ android {
 dependencies {
     //noinspection UseTomlInstead,Aligned16KB
     implementation("org.godotengine:godot:4.3.0.stable")
-    //noinspection UseTomlInstead,NewerVersionAvailable
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    //noinspection UseTomlInstead,GradleDependency
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation(libs.androidx.core)
+    implementation(libs.androidx.appcompat)
 }
 
