@@ -19,17 +19,12 @@ import org.godotengine.godot.plugin.SignalInfo
 import org.godotengine.godot.plugin.UsedByGodot
 
 
-private const val CHANNEL_ID = "godot_notification_channel"
 private const val REQUEST_NOTIF_PERMISSION = 1001
 
 
 @Suppress("unused")
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
-
-    init {
-        createNotificationChannel()
-    }
 
     override fun getPluginSignals(): Set<SignalInfo> {
         return setOf(
@@ -101,12 +96,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
 
     @UsedByGodot
-    fun createNotificationChannel() {
+    fun createNotificationChannel(channelId : String) {
         Log.d("GodotNotif", "Notification channel created.")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val activity = activity ?: return
             val channel = NotificationChannel(
-                CHANNEL_ID,
+                channelId,
                 "Godot Notifications",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
@@ -206,15 +201,16 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         title: String,
         text: String,
         channelId: String,
+        priority : Int,
         autoCancel: Boolean
     ) {
         val activity = activity ?: return
 
-        val builder = NotificationCompat.Builder(activity, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(activity, channelId)
             .setSmallIcon(android.R.drawable.btn_star)
             .setContentTitle(title)
             .setContentText(text)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(priority)
             .setAutoCancel(autoCancel)
 
         val manager =
