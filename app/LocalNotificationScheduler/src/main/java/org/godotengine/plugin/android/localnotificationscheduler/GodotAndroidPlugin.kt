@@ -1,18 +1,8 @@
 package org.godotengine.plugin.android.localnotificationscheduler
 
-import android.Manifest
-import android.app.AlarmManager
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.Context
-import android.content.Intent
+import android.app.NotificationManager.IMPORTANCE_DEFAULT
 import android.content.pm.PackageManager
-import android.os.Build
 import android.util.Log
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
 import org.godotengine.godot.plugin.SignalInfo
@@ -24,6 +14,10 @@ private const val REQUEST_NOTIF_PERMISSION = 1001
 
 @Suppress("unused")
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
+
+    val notificationHandler = NotificationHandler()
+
+
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
 
     override fun getPluginSignals(): Set<SignalInfo> {
@@ -42,10 +36,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         if (requestCode == REQUEST_NOTIF_PERMISSION) {
             if (grantResults != null && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 emitSignal("permission_granted")
-                Log.d("GodotNotif", "Permission granted by user.")
+                Log.d(Constants.LOG_TAG, "Permission granted by user.")
             } else {
                 emitSignal("permission_denied")
-                Log.d("GodotNotif", "Permission denied by user.")
+                Log.d(Constants.LOG_TAG, "Permission denied by user.")
             }
         }
     }
@@ -54,148 +48,46 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     @UsedByGodot
     fun requestNotificationPermission() {
-        val activity = activity ?: return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val granted = ContextCompat.checkSelfPermission(
-                activity,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-
-            if (!granted) {
-                ActivityCompat.requestPermissions(
-                    activity,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    REQUEST_NOTIF_PERMISSION
-                )
-
-                Log.d("GodotNotif", "Notification permission requested.")
-            } else {
-                emitSignal("permission_granted")
-                Log.d("GodotNotif", "Notification permission already granted.")
-            }
-        } else {
-            emitSignal("permission_granted")
-            Log.d("GodotNotif", "No runtime permission needed (API < 33).")
-        }
+        notificationHandler.requestNotificationPermission(
+            activity
+        )
     }
 
     @UsedByGodot
     fun hasNotificationPermission(): Boolean {
-        val activity = activity ?: return false
-
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                activity,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            // On Android 12 and below, permission is implicitly granted
-            true
-        }
+        return notificationHandler.hasNotificationPermission(
+            activity
+        )
     }
 
 
     @UsedByGodot
-    fun createNotificationChannel(channelId : String) {
-        Log.d("GodotNotif", "Notification channel created.")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val activity = activity ?: return
-            val channel = NotificationChannel(
-                channelId,
-                "Godot Notifications",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Basic test channel"
-            }
-
-            val manager =
-                activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
-        }
-    }
-
-
-    @UsedByGodot
-    fun scheduleRepeatingNotification(
-        id: Int,
-        channelId: String,
-        title: String,
-        text: String,
-        priority : Int,
-        autoCancel: Boolean,
-        triggerAtMillis: Long,
-        intervalMillis: Long
-    ) {
-        val activity = activity ?: return
-
-        val intent = Intent(activity, NotificationReceiver::class.java).apply {
-            putExtra("id", id)
-            putExtra("channelId", channelId)
-            putExtra("title", title)
-            putExtra("text", text)
-            putExtra("priority", priority)
-            putExtra("autoCancel", autoCancel)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
+    fun createNotificationChannel() {
+        notificationHandler.createNotificationChannel(
             activity,
-            id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.setRepeating(
-            AlarmManager.RTC_WAKEUP,
-            triggerAtMillis,
-            intervalMillis,
-            pendingIntent
-        )
-
-        Log.d(
-            "GodotNotif",
-            "Schedule Repeating Notification at triggerAtMillis '$triggerAtMillis' and at intervalMillis '$intervalMillis'"
+            Constants.CHANNEL_ID
         )
     }
+
 
     @UsedByGodot
     fun scheduleNotification(
         id: Int,
-        channelId: String,
         title: String,
         text: String,
-        priority : Int,
-        autoCancel: Boolean,
-        triggerAtMillis: Long
+        trigger: Long,
+        interval: Long
     ) {
-        val activity = activity ?: return
-
-        val intent = Intent(activity, NotificationReceiver::class.java).apply {
-            putExtra("id", id)
-            putExtra("channelId", channelId)
-            putExtra("title", title)
-            putExtra("text", text)
-            putExtra("priority", priority)
-            putExtra("autoCancel", autoCancel)
-        }
-
-        val pendingIntent = PendingIntent.getBroadcast(
+        notificationHandler.scheduleNotification(
             activity,
             id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.set(
-            AlarmManager.RTC_WAKEUP,
-            triggerAtMillis,
-            pendingIntent
-        )
-
-        Log.d(
-            "GodotNotif",
-            "Schedule one-time Notification at triggerAtMillis '$triggerAtMillis'"
+            Constants.CHANNEL_ID,
+            title,
+            text,
+            IMPORTANCE_DEFAULT,
+            true,
+            trigger,
+            interval
         )
     }
 
@@ -203,42 +95,24 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     fun scheduleInstantNotification(
         id: Int,
         title: String,
-        text: String,
-        channelId: String,
-        priority : Int,
-        autoCancel: Boolean
+        text: String
     ) {
-        val activity = activity ?: return
-
-        val builder = NotificationCompat.Builder(activity, channelId)
-            .setSmallIcon(android.R.drawable.btn_star)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setPriority(priority)
-            .setAutoCancel(autoCancel)
-
-        val manager =
-            activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(id, builder.build())
-        Log.d("GodotNotif", "Notification requested: $title - $text")
+        notificationHandler.scheduleInstantNotification(
+            activity,
+            id,
+            Constants.CHANNEL_ID,
+            title,
+            text,
+            IMPORTANCE_DEFAULT,
+            true
+        )
     }
 
     @UsedByGodot
     fun cancelScheduledNotification(id: Int) {
-        val activity = activity ?: return
-
-        val intent = Intent(activity, NotificationReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
+        notificationHandler.cancelScheduledNotification(
             activity,
-            id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            id
         )
-
-        val alarmManager = activity.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        alarmManager.cancel(pendingIntent)
-        pendingIntent.cancel()
-
-        Log.d("GodotNotif", "Notification, with id $id, was canceled.")
     }
 }

@@ -3,11 +3,24 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application>
-        <receiver android:name="org.godotengine.plugin.android.localnotificationscheduler.NotificationReceiver"
-            android:exported="true"/>
+        <receiver
+            android:name="org.godotengine.plugin.android.localnotificationscheduler.NotificationReceiver"
+            android:exported="true"
+            android:enabled="true" />
+
+        <receiver
+            android:name="org.godotengine.plugin.android.localnotificationscheduler.BootReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.RESTART"/>
+            </intent-filter>
+        </receiver>
 
         <meta-data
             android:name="org.godotengine.plugin.v1.LocalNotificationScheduler"
             android:value="org.godotengine.plugin.android.localnotificationscheduler.GodotAndroidPlugin"/>
     </application>
+
 </manifest>
