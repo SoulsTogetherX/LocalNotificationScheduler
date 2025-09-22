@@ -43,9 +43,7 @@ class NotificationReceiver : BroadcastReceiver() {
                 val current = System.currentTimeMillis()
                 var trigger = prefs.getLong("notif_${id}_trigger", 0)
 
-                while (trigger > current) {
-                    trigger += interval
-                }
+                trigger += (((current - trigger) / interval) + 1) * interval
 
                 prefs.edit {
                     putLong("notif_${id}_trigger", trigger)

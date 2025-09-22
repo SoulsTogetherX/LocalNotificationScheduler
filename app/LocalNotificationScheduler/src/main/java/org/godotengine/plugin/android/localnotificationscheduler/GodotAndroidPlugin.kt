@@ -35,11 +35,11 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         super.onMainRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_NOTIF_PERMISSION) {
             if (grantResults != null && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                emitSignal("permission_granted")
-                Log.d(Constants.LOG_TAG, "Permission granted by user.")
+                emitSignal("notification_permission_granted")
+                Log.d(Constants.LOG_TAG, "Notification permission granted by user.")
             } else {
-                emitSignal("permission_denied")
-                Log.d(Constants.LOG_TAG, "Permission denied by user.")
+                emitSignal("notification_permission_denied")
+                Log.d(Constants.LOG_TAG, "Notification permission denied by user.")
             }
         }
     }
@@ -56,6 +56,21 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun hasNotificationPermission(): Boolean {
         return notificationHandler.hasNotificationPermission(
+            activity
+        )
+    }
+
+
+    @UsedByGodot
+    fun requestExactAlarmPermission() {
+        notificationHandler.requestExactAlarmPermission(
+            activity
+        )
+    }
+
+    @UsedByGodot
+    fun canScheduleExactAlarms(): Boolean {
+        return notificationHandler.canScheduleExactAlarms(
             activity
         )
     }
