@@ -35,10 +35,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         super.onMainRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_NOTIF_PERMISSION) {
             if (grantResults != null && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                emitSignal("notification_permission_granted")
+                emitSignal("permission_granted")
                 Log.d(Constants.LOG_TAG, "Notification permission granted by user.")
             } else {
-                emitSignal("notification_permission_denied")
+                emitSignal("permission_denied")
                 Log.d(Constants.LOG_TAG, "Notification permission denied by user.")
             }
         }
@@ -90,8 +90,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         id: Int,
         title: String,
         text: String,
-        trigger: Long,
-        interval: Long
+        daysOfWeek: IntArray,
+        hourOfDay : Int,
+        minute : Int
     ) {
         notificationHandler.scheduleNotification(
             activity,
@@ -99,10 +100,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             Constants.CHANNEL_ID,
             title,
             text,
-            IMPORTANCE_DEFAULT,
-            true,
-            trigger,
-            interval
+            daysOfWeek.toSet(),
+            hourOfDay,
+            minute
         )
     }
 

@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import java.util.Calendar
 
 
 class NotificationHandler {
@@ -26,32 +27,24 @@ class NotificationHandler {
         channelId: String,
         title: String,
         text: String,
-        priority: Int,
-        autoCancel: Boolean,
-        triggerAtMillis: Long,
-        intervalMillis: Long?
+        daysOfWeek: Set<Int>,
+        hourOfDay : Int,
+        minute : Int
     ) {
         val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
-
-        val ids = prefs.getStringSet(Constants.NOTIF_ID_NAME, emptySet())?.toMutableSet() ?: mutableSetOf()
-        ids.add(id.toString())
 
         prefs.edit {
             putString("notif_${id}_channelId", channelId)
             putString("notif_${id}_title", title)
             putString("notif_${id}_text", text)
-            putInt("notif_${id}_priority", priority)
-            putBoolean("notif_${id}_autoCancel", autoCancel)
-            putLong("notif_${id}_trigger", triggerAtMillis)
 
-            if (intervalMillis != null) {
-                putLong("notif_${id}_interval", intervalMillis)
-            } else {
-                remove("notif_${id}_interval")
-            }
+            putStringSet("notif_${id}_daysOfWeek", daysOfWeek.map { it.toString() }.toSet())
+            putInt("notif_${id}_hourOfDay", hourOfDay)
+            putInt("notif_${id}_minute", minute)
 
-            putStringSet(Constants.NOTIF_ID_NAME,ids)
-
+            val ids = prefs.getStringSet(Constants.NOTIF_ID_NAME, emptySet())!!.toMutableSet()
+            ids.add(id.toString())
+            putStringSet(Constants.NOTIF_ID_NAME, ids)
             apply()
         }
     }
@@ -62,18 +55,17 @@ class NotificationHandler {
     ) {
         val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
 
-        var ids : Set<String> = prefs.getStringSet(Constants.NOTIF_ID_NAME,  setOf<String>())!!
-        ids = ids.minus(id.toString())
-
         prefs.edit {
             remove("notif_${id}_channel")
             remove("notif_${id}_title")
             remove("notif_${id}_text")
-            remove("notif_${id}_priority")
-            remove("notif_${id}_autoCancel")
-            remove("notif_${id}_trigger")
-            remove("notif_${id}_interval")
 
+            remove("notif_${id}_daysOfWeek")
+            remove("notif_${id}_hourOfDay")
+            remove("notif_${id}_minute")
+
+            var ids : Set<String> = prefs.getStringSet(Constants.NOTIF_ID_NAME,  setOf<String>())!!
+            ids = ids.minus(id.toString())
             putStringSet(Constants.NOTIF_ID_NAME,ids)
 
             apply()
@@ -179,20 +171,33 @@ class NotificationHandler {
         channelId: String,
         title: String,
         text: String,
-        priority : Int,
-        autoCancel: Boolean,
-        trigger: Long,
-        interval: Long?
+        daysOfWeek: Set<Int>,
+        hourOfDay : Int,
+        minute : Int
     ) {
         val context = context ?: return
+
+        val now = Calendar.getInstance()
+        val next = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hourOfDay)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        while (next.before(now) || !daysOfWeek.contains(next.get(Calendar.DAY_OF_WEEK))) {
+            next.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        val trigger = next.timeInMillis
 
         val intent = Intent(context, NotificationReceiver::class.java).apply {
             putExtra("id", id)
             putExtra("channelId", channelId)
             putExtra("title", title)
             putExtra("text", text)
-            putExtra("priority", priority)
-            putExtra("autoCancel", autoCancel)
+            putExtra("daysOfWeek", daysOfWeek.toIntArray())
+            putExtra("hourOfDay", hourOfDay)
+            putExtra("minute", minute)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
@@ -240,15 +245,14 @@ class NotificationHandler {
             channelId,
             title,
             text,
-            priority,
-            autoCancel,
-            trigger,
-            interval
+            daysOfWeek,
+            hourOfDay,
+            minute
         )
 
         Log.d(
             Constants.LOG_TAG,
-            "Schedule Notification at triggerAtMillis '$trigger'"
+            "Schedule Notification"
         )
     }
 

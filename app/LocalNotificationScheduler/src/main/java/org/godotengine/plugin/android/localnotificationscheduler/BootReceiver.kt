@@ -15,17 +15,17 @@ class BootReceiver : BroadcastReceiver() {
             Log.d("GodotNotif", "Device rebooted, restoring scheduled notifications...")
 
             val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
-            val ids : Set<String> = prefs.getStringSet(Constants.NOTIF_ID_NAME,  setOf<String>())!!
+            val ids = prefs.getStringSet(Constants.NOTIF_ID_NAME,  setOf<String>()) ?: setOf<String>()
 
             for (idStr in ids) {
                 val id = idStr.toInt()
                 val channelId = prefs.getString("notif_${id}_channelId", "default") ?: "default"
                 val title = prefs.getString("notif_${id}_title", "Reminder") ?: "Reminder"
                 val text = prefs.getString("notif_${id}_text", "") ?: ""
-                val priority = prefs.getInt("notif_${id}_priority", 0)
-                val autoCancel = prefs.getBoolean("notif_${id}_autoCancel", true)
-                val triggerAtMillis = prefs.getLong("notif_${id}_trigger", 0)
-                val intervalMillis = prefs.getLong("notif_${id}_interval", 0)
+
+                val daysOfWeek = prefs.getStringSet("notif_${id}_text",  setOf<String>()) ?: setOf<String>()
+                val hourOfDay = prefs.getInt("notif_${id}_hourOfDay", 0)
+                val minute = prefs.getInt("notif_${id}_minute", 0)
 
                 notificationHandler.scheduleNotification(
                     context,
@@ -33,10 +33,9 @@ class BootReceiver : BroadcastReceiver() {
                     channelId,
                     title,
                     text,
-                    priority,
-                    autoCancel,
-                    triggerAtMillis,
-                    intervalMillis
+                    daysOfWeek.map { it.toInt() }.toSet(),
+                    hourOfDay,
+                    minute
                 )
             }
         }

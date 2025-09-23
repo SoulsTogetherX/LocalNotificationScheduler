@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import android.util.Log
-import androidx.core.content.edit
 
 
 class NotificationReceiver : BroadcastReceiver() {
@@ -18,57 +17,44 @@ class NotificationReceiver : BroadcastReceiver() {
         val channelId = intent.getStringExtra("channelId") ?: "godot_notification_channel"
         val title = intent.getStringExtra("title") ?: "Title"
         val text = intent.getStringExtra("text") ?: "Text"
-        val priority = intent.getIntExtra("priority", NotificationCompat.PRIORITY_DEFAULT)
-        val autoCancel = intent.getBooleanExtra("autoCancel", true)
+
+        val daysOfWeek = intent.getIntArrayExtra("daysOfWeek")?.toSet() ?: setOf()
+        val hourOfDay = intent.getIntExtra("hourOfDay", 0)
+        val minute = intent.getIntExtra("minute", 0)
+
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(title)
             .setContentText(text)
-            .setPriority(priority)
-            .setAutoCancel(autoCancel)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
 
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(id, builder.build())
 
         Log.d(Constants.LOG_TAG, "Delivered scheduled notification: $title - $text")
 
+
         val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
-        val hasId = (prefs.getStringSet(Constants.NOTIF_ID_NAME,  setOf<String>())!!).contains(id.toString())
+        val hasId = (prefs.getStringSet(Constants.NOTIF_ID_NAME,  setOf<String>()))?.contains(id.toString()) ?: false
 
         if (hasId) {
-            val interval = prefs.getLong("notif_${id}_interval", 0)
-
-            if (interval > 0) {
-                val current = System.currentTimeMillis()
-                var trigger = prefs.getLong("notif_${id}_trigger", 0)
-
-                trigger += (((current - trigger) / interval) + 1) * interval
-
-                prefs.edit {
-                    putLong("notif_${id}_trigger", trigger)
-                }
-
-                notificationHandler.scheduleNotification(
-                    context,
-                    id,
-                    channelId,
-                    title,
-                    text,
-                    priority,
-                    autoCancel,
-                    trigger,
-                    interval
-                )
-
-                Log.d(Constants.LOG_TAG, "Request repeat notification: $title - $text")
-                return
-            }
-
-            notificationHandler.cancelScheduledNotification(
+            notificationHandler.scheduleNotification(
                 context,
-                id
+                id,
+                channelId,
+                title,
+                text,
+                daysOfWeek,
+                hourOfDay,
+                minute
             )
+
+            Log.d(Constants.LOG_TAG, "Request repeat notification: $title - $text")
+            return
         }
+
+        Log.d(Constants.LOG_TAG, "Error when requesting repeat notification: $title - $text")
     }
 }
